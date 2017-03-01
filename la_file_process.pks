@@ -406,6 +406,10 @@ FUNCTION  DATE_REFORMAT ( P_DATE VARCHAR2 ) RETURN VARCHAR2;
 
 PROCEDURE RE_NUMBER_DISPUTES;
 
+function clean_invoice_nbr( LPSICLEAR VARCHAR2) RETURN VARCHAR2;
+
+function clean_order_nbr( Order_nbr VARCHAR2) RETURN VARCHAR2;
+
 
 END;
 
@@ -1769,69 +1773,12 @@ Y := 0;
 
          END LOOP;
 
-
-
-
          FOR X IN 1..Tot LOOP
 
-          --INVOICE_NBR
-
                    RP.INVOICE_AMT(x) := TRIM(TRANSLATE(RP.INVOICE_AMT(x), '"',' '));
-                   RP.VENDOR_COMMENT(x) := TRIM(TRANSLATE(RP.VENDOR_COMMENT(x), '"',' '));
-                   INVOICE_NBR := RP.INVOICE_NBR_SHORT(x);
-
-                        --------    0123456789
-                   IF (RP.CLIENT(X) NOT IN ('DELETE') AND RP.INVOICE_NBR(X) NOT IN ('DELETE'))
-                       THEN
-                            IF (LENGTH(TRIM(TRANSLATE(RP.INVOICE_NBR_SHORT(X), '0123456789',' ')))  IS NULL)
-                                THEN
-                                  INVOICE_NBR := RP.INVOICE_NBR_SHORT(x);
-                            END IF;
-
-                           if  ( instr(RP.INVOICE_NBR_SHORT(x),'-') > 1 )
-                               then
-                                 INVOICE_NBR := SUBSTR(RP.INVOICE_NBR_SHORT(x),1,(INSTR(RP.INVOICE_NBR_SHORT(x),'-') - 1));
-                                 WORK_ORDER  := SUBSTR(RP.INVOICE_NBR_SHORT(x),(INSTR(RP.INVOICE_NBR_SHORT(x),'-') + 1));
-                           end if;
-
-/*
-                           IF  (LENGTH(TRIM(TRANSLATE(RP.INVOICE_NBR_SHORT(x), '-0123456789',' '))) IS NULL)
-                              THEN
-                                 INVOICE_NBR := SUBSTR(RP.INVOICE_NBR_SHORT(x),1,(INSTR(RP.INVOICE_NBR_SHORT(x),'-') - 1));
-                                 WORK_ORDER  := SUBSTR(RP.INVOICE_NBR_SHORT(x),(INSTR(RP.INVOICE_NBR_SHORT(x),'-') + 1));
-                           END IF;
-
-                          IF (LENGTH(TRIM(TRANSLATE(RP.INVOICE_NBR_SHORT(x), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',' '))) IS NULL )
-                             THEN
-                                ----- 0123456789(A-Z)
-                                  INVOICE_NBR := TRIM(TRANSLATE(RP.INVOICE_NBR_SHORT(x),'ABCDEFGHIJKLMNOPQRSTUVWXYZ',' '));
-                            END IF;
-
-
-                          IF (LENGTH(TRIM(TRANSLATE(RP.INVOICE_NBR_SHORT(x), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789',' '))) IS NULL )
-                           THEN
-                              --- ABC   and  0123456789
-                             INVOICE_PRE := SUBSTR(RP.INVOICE_NBR_SHORT(x),1,(INSTR(RP.INVOICE_NBR_SHORT(x),'-') - 1));
-                              --- 0123456789  and  0123456789ABC
-                             INVOICE_SUF := SUBSTR(RP.INVOICE_NBR_SHORT(x),(INSTR(RP.INVOICE_NBR_SHORT(x),'-') + 1));
-
-                               IF ( LENGTH(TRIM(TRANSLATE(INVOICE_PRE, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',' '))) IS NULL )
-                                  THEN
-                                      INVOICE_NBR := TRIM(TRANSLATE(INVOICE_SUF,'ABCDEFGHIJKLMNOPQRSTUVWXYZ',' '));
-                               ELSE
-                                      INVOICE_NBR := TRIM(TRANSLATE(INVOICE_PRE,'ABCDEFGHIJKLMNOPQRSTUVWXYZ',' '));
-                               END IF;
-
-                          END IF;
-                      */
-
-                   END IF;
-
-                   RP.ORDER_NBR(x)    := CASE WHEN RP.ORDER_NBR(X) IS NULL THEN WORK_ORDER  ELSE RP.ORDER_NBR(X) END;
-
-                 RP.INVOICE_NBR_SHORT(x) := INVOICE_NBR;
-
-         END LOOP;
+                   RP.VENDOR_COMMENT(x) := TRIM(TRANSLATE(RP.VENDOR_COMMENT(x), '"',' '));                    
+                                               
+            END LOOP;
 
            FOR X IN 1..Tot LOOP
 
@@ -1847,10 +1794,11 @@ Y := 0;
 
                    BEGIN
 
-                         INSERT INTO LA_RESOLUTION_PENDING ( CLIENT,INVOICE_NBR,ORDER_NBR,VENDOR_CONTACT,LOAN_NBR,INVOICE_DATE,DEPT,STATE,RESOLUTION_TYPE,INVOICE_AMT,VENDOR_COMMENT,VENDOR_DATE,CLIENT_COMMENT,CLIENT_DATE,REASON,RESOLUTION_DEADLINE,CURTAIL_DATE,PID,LOAD_ID)
+                         INSERT INTO LA_RESOLUTION_PENDING ( CLIENT, LPS_ICLEAR,INVOICE_NBR,ORDER_NBR,VENDOR_CONTACT,LOAN_NBR,INVOICE_DATE,DEPT,STATE,RESOLUTION_TYPE,INVOICE_AMT,VENDOR_COMMENT,VENDOR_DATE,CLIENT_COMMENT,CLIENT_DATE,REASON,RESOLUTION_DEADLINE,CURTAIL_DATE,PID,LOAD_ID)
                          VALUES ( RP.CLIENT(x),
                                   RP.INVOICE_NBR_SHORT(x),
-                                  RP.ORDER_NBR(x),
+                                  LA_FILE_PROCESS.clean_invoice_nbr( RP.INVOICE_NBR_SHORT(x)),
+                                  LA_FILE_PROCESS.clean_order_nbr( RP.ORDER_NBR(x)),
                                   RP.VENDOR_CONTACT(x),
                                   RP.LOAN_NBR(x),
                                   LA_FILE_PROCESS.DATE_REFORMAT(RP.INVOICE_DATE(x)),
